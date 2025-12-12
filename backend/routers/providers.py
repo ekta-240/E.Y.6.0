@@ -1,9 +1,76 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from ..db import get_db, Provider, ProviderScore, DriftScore, FieldConfidence, AuditLog
+from ..db import get_db, Provider, ProviderScore, DriftScore, FieldConfidence, AuditLog, Document
 
 router = APIRouter(prefix="/providers", tags=["providers"])
+
+
+@router.get("/{provider_id}/ocr")
+async def get_provider_ocr(provider_id: int, db: Session = Depends(get_db)):
+    doc = db.query(Document).filter(Document.provider_id == provider_id).first()
+    if not doc:
+        return {"exists": False}
+    return {
+        "exists": True,
+        "doc_type": doc.doc_type,
+        "ocr_text": doc.ocr_text,
+        "ocr_confidence": doc.ocr_confidence,
+        "path": doc.path
+    }
+
+
+@router.get("/{provider_id}/details")
+async def get_provider_details(provider_id: int, db: Session = Depends(get_db)):
+    # This endpoint aggregates everything for the detail page
+    provider = db.query(Provider).get(provider_id)
+    if not provider:
+        raise HTTPException(status_code=404, detail="Provider not found")
+    
+    score = db.query(ProviderScore).filter(ProviderScore.provider_id == provider.id).first()
+    drift = db.query(DriftScore).filter(DriftScore.provider_id == provider.id).first()
+    
+    # Get field confidence to show "Validated Data" vs "Original"
+    confs = db.query(FieldConfidence).filter(FieldConfidence.provider_id == provider.id).all()
+    
+    validation_data = {}
+    for c in confs:
+        validation_data[c.field_name] = {
+            "confidence": c.confidence,
+            "sources": c.sources # This contains the candidates
+        }
+
+    return {
+        "provider": {
+            "id": provider.id,
+            "name": provider.name,
+            "phone": provider.phone,
+            "address": provider.address,
+            "specialty": provider.specialty,
+            "license_no": provider.license_no,
+            "license_expiry": provider.license_expiry,
+        },
+        "validation": validation_data,
+        "pcs": {
+            "score": score.pcs if score else 0,
+            "band": score.band if score else "N/A",
+            "components": {
+                "srm": score.srm if score else 0,
+                "fr": score.fr if score else 0,
+                "st": score.st if score else 0,
+                "mb": score.mb if score else 0,
+                "dq": score.dq if score else 0,
+                "rp": score.rp if score else 0,
+                "lh": score.lh if score else 0,
+                "ha": score.ha if score else 0,
+            }
+        } if score else None,
+        "drift": {
+            "score": drift.score if drift else 0,
+            "bucket": drift.bucket if drift else "Low",
+            "explanation": "High drift detected due to license expiry proximity." if drift and drift.bucket == "High" else "Stable data patterns."
+        } if drift else None
+    }
 
 
 @router.get("")

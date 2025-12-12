@@ -76,3 +76,26 @@ async def override_manual_review(item_id: int, value: str, db: Session = Depends
     db.commit()
 
     return {"status": "ok"}
+
+
+@router.post("/{item_id}/reject")
+async def reject_manual_review(item_id: int, db: Session = Depends(get_db)):
+    item = db.query(ManualReviewItem).get(item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    # Rejecting means we keep the current value (or do nothing) and mark as rejected
+    item.status = "rejected"
+    
+    log = AuditLog(
+        provider_id=item.provider_id,
+        field_name=item.field_name,
+        old_value=item.current_value,
+        new_value=item.current_value, # No change
+        action="manual_reject",
+        actor="human_reviewer",
+    )
+    db.add(log)
+    db.commit()
+
+    return {"status": "ok"}

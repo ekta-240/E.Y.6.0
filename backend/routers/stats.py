@@ -26,6 +26,36 @@ async def get_stats(db: Session = Depends(get_db)):
         if d.bucket in drift_dist:
             drift_dist[d.bucket] += 1
 
+    # PCS Distribution
+    pcs_scores = [s.pcs for s in db.query(ProviderScore).all()]
+    pcs_dist = {"0-50": 0, "50-70": 0, "70-90": 0, "90-100": 0}
+    for score in pcs_scores:
+        if score < 50:
+            pcs_dist["0-50"] += 1
+        elif score < 70:
+            pcs_dist["50-70"] += 1
+        elif score < 90:
+            pcs_dist["70-90"] += 1
+        else:
+            pcs_dist["90-100"] += 1
+
+    # Trend (Last 5 runs)
+    last_runs = (
+        db.query(ValidationRun)
+        .order_by(ValidationRun.started_at.desc())
+        .limit(5)
+        .all()
+    )
+    trend = [
+        {
+            "id": r.id,
+            "date": r.started_at.strftime("%Y-%m-%d"),
+            "auto_updates": r.auto_updates,
+            "manual_reviews": r.manual_reviews
+        }
+        for r in reversed(last_runs)
+    ]
+
     return {
         "latest_run": {
             "id": latest.id if latest else None,
@@ -38,4 +68,6 @@ async def get_stats(db: Session = Depends(get_db)):
         },
         "avg_pcs": avg_pcs,
         "drift_distribution": drift_dist,
+        "pcs_distribution": pcs_dist,
+        "trend": trend
     }
