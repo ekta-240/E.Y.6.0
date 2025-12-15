@@ -336,15 +336,19 @@ function ProviderDetail({ providerId, onBack }) {
                 </tr>
               </thead>
               <tbody>
-                {Object.entries(validation).map(([field, info]) =>
-                  (info.sources || []).map((src, idx) => (
-                    <tr key={`${field}-${idx}`}>
-                      <td>{field}</td>
-                      <td>{src.source}</td>
-                      <td>{src.value}</td>
-                    </tr>
-                  ))
-                )}
+                {Object.entries(validation).map(([field, info]) => (
+                        (info.sources || []).map((src, idx) => {
+                          const sourceLabel = typeof src === 'string' ? src : (src?.source ?? 'unknown');
+                          const sourceValue = typeof src === 'object' && src !== null ? (src.value ?? '—') : '—';
+                          return (
+                            <tr key={`${field}-${idx}`}>
+                                <td>{field}</td>
+                                <td>{sourceLabel}</td>
+                                <td>{sourceValue}</td>
+                            </tr>
+                          );
+                        })
+                    ))}
               </tbody>
             </table>
           </div>
