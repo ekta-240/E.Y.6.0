@@ -33,11 +33,7 @@ function ProgressBar({ value, max = 100, color = '#4caf50' }) {
   );
 }
 
-/* =====================
-   DASHBOARD (UNCHANGED)
-   ===================== */
-
-function Dashboard({ stats }) {
+function Dashboard({ stats, manualReviewCount }) {
   if (!stats) return <div>Loading stats...</div>;
   
   const { latest_run, avg_pcs, drift_distribution, pcs_distribution, trend } = stats;
@@ -65,7 +61,7 @@ function Dashboard({ stats }) {
           </div>
           <div className="stat-item">
             <h3>Manual Review</h3>
-            <p className="text-warning">{latest_run.manual_reviews}</p>
+            <p className="text-warning">{manualReviewCount || 0}</p>
           </div>
           <div className="stat-item">
             <h3>Avg PCS</h3>
@@ -637,7 +633,7 @@ export default function App() {
       </aside>
 
       <main className="content">
-        {view === 'dashboard' && <Dashboard stats={stats} />}
+        {view === 'dashboard' && <Dashboard stats={stats} manualReviewCount={manualItems.length} />}
         {view === 'providers' && <ProviderList providers={providers} onSelect={navigateToDetail} />}
         {view === 'detail' && <ProviderDetail providerId={selectedProviderId} onBack={() => setView('providers')} />}
         {view === 'manual' && <ManualReview items={manualItems} onAction={handleManualAction} />}
