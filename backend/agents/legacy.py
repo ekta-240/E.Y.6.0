@@ -232,7 +232,7 @@ def qa_evaluate(
         "explanation_inputs": {},  # 👈 store inputs, NOT LLM text
     }
 
-    threshold = 0.75
+    threshold = 0.70  # >70% confidence for auto-update per requirements
 
     for field in [
         "phone",

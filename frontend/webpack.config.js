@@ -36,11 +36,17 @@ module.exports = {
     port: 3020,
     proxy: [
       {
-        context: ['/stats', '/providers', '/manual-review', '/run-batch', '/health', '/reports'],
+        context: ['/stats', '/providers', '/manual-review', '/run-batch', '/health', '/reports', '/explain'],
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,
         timeout: 30000,
         proxyTimeout: 30000,
+        onProxyRes: (proxyRes, req, res) => {
+          // Handle binary responses (PDFs)
+          if (req.url.startsWith('/reports')) {
+            proxyRes.headers['content-type'] = 'application/pdf';
+          }
+        },
       },
     ],
   },

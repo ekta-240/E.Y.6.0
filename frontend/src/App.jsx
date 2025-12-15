@@ -176,6 +176,7 @@ function ProviderList({ providers, onSelect }) {
 function ProviderDetail({ providerId, onBack }) {
   const [data, setData] = useState(null);
   const [ocr, setOcr] = useState(null);
+  const [qaHistory, setQaHistory] = useState([]);
 
   // 🔹 EXPLAIN STATE
   const [explanations, setExplanations] = useState({});
@@ -186,6 +187,7 @@ function ProviderDetail({ providerId, onBack }) {
     if (!providerId) return;
     axios.get(`/providers/${providerId}/details`).then(res => setData(res.data));
     axios.get(`/providers/${providerId}/ocr`).then(res => setOcr(res.data));
+    axios.get(`/providers/${providerId}/qa`).then(res => setQaHistory(res.data));
   }, [providerId]);
 
   if (!data) return <div>Loading details...</div>;
@@ -352,6 +354,37 @@ function ProviderDetail({ providerId, onBack }) {
               </tbody>
             </table>
           </div>
+
+          <div className="card">
+            <h3>📊 Confidence History</h3>
+            {qaHistory.length === 0 ? (
+              <p>No validation history available.</p>
+            ) : (
+              <table className="qa-history-table">
+                <thead>
+                  <tr>
+                    <th>Field</th>
+                    <th>Confidence</th>
+                    <th>Sources</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {qaHistory.slice(0, 10).map((qa, idx) => (
+                    <tr key={idx}>
+                      <td>{qa.field_name}</td>
+                      <td>
+                        <ProgressBar value={qa.confidence * 100} max={100} color={qa.confidence >= 0.7 ? '#4caf50' : '#ff9800'} />
+                        <span style={{fontSize: '0.8rem', marginLeft: '0.5rem'}}>{(qa.confidence * 100).toFixed(0)}%</span>
+                      </td>
+                      <td>{qa.sources ? qa.sources.join(', ') : 'N/A'}</td>
+                      <td>{qa.created_at ? new Date(qa.created_at).toLocaleDateString() : 'N/A'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
 
         {/* RIGHT COLUMN */}
@@ -422,6 +455,32 @@ function ProviderDetail({ providerId, onBack }) {
    ===================== */
 
 function ManualReview({ items, onAction }) {
+  const [explanations, setExplanations] = useState({});
+  const [loadingExplanation, setLoadingExplanation] = useState({});
+
+  const getAIExplanation = async (item) => {
+    setLoadingExplanation({ ...loadingExplanation, [item.id]: true });
+    try {
+      const response = await axios.post('/explain', {
+        field: item.field_name,
+        current_value: item.current_value,
+        candidates: [], // Could be enhanced with actual candidates
+        chosen_value: item.suggested_value,
+        confidence: 0.5, // Default confidence for manual review items
+        decision: 'manual_review'
+      });
+      setExplanations({ ...explanations, [item.id]: response.data.explanation });
+    } catch (err) {
+      if (err.response?.status === 429) {
+        alert('Rate limit exceeded. Please wait before requesting more explanations.');
+      } else {
+        alert('Failed to get AI explanation');
+      }
+    } finally {
+      setLoadingExplanation({ ...loadingExplanation, [item.id]: false });
+    }
+  };
+
   return (
     <div className="card">
       <h2>📝 Manual Review Queue</h2>
@@ -440,22 +499,40 @@ function ManualReview({ items, onAction }) {
           </thead>
           <tbody>
             {items.map((i) => (
-              <tr key={i.id}>
-                <td>{i.id}</td>
-                <td>{i.provider_id}</td>
-                <td>{i.field_name}</td>
-                <td className="text-strike">{i.current_value}</td>
-                <td className="text-highlight">{i.suggested_value}</td>
-                <td>{i.reason}</td>
-                <td className="actions-cell">
-                  <button className="btn-approve" onClick={() => onAction(i.id, 'approve')}>Approve</button>
-                  <button className="btn-override" onClick={() => {
-                    const val = window.prompt('Enter override value:', i.suggested_value);
-                    if (val) onAction(i.id, 'override', val);
-                  }}>Override</button>
-                  <button className="btn-reject" onClick={() => onAction(i.id, 'reject')}>Reject</button>
-                </td>
-              </tr>
+              <React.Fragment key={i.id}>
+                <tr>
+                  <td>{i.id}</td>
+                  <td>{i.provider_id}</td>
+                  <td>{i.field_name}</td>
+                  <td className="text-strike">{i.current_value}</td>
+                  <td className="text-highlight">{i.suggested_value}</td>
+                  <td>{i.reason}</td>
+                  <td className="actions-cell">
+                    <button className="btn-approve" onClick={() => onAction(i.id, 'approve')}>Approve</button>
+                    <button className="btn-override" onClick={() => {
+                      const val = window.prompt('Enter override value:', i.suggested_value);
+                      if (val) onAction(i.id, 'override', val);
+                    }}>Override</button>
+                    <button className="btn-reject" onClick={() => onAction(i.id, 'reject')}>Reject</button>
+                    <button 
+                      className="btn-explain" 
+                      onClick={() => getAIExplanation(i)}
+                      disabled={loadingExplanation[i.id]}
+                    >
+                      {loadingExplanation[i.id] ? '...' : '🤖 Explain'}
+                    </button>
+                  </td>
+                </tr>
+                {explanations[i.id] && (
+                  <tr>
+                    <td colSpan="7" className="explanation-row">
+                      <div className="ai-explanation">
+                        <strong>🤖 AI Analysis:</strong> {explanations[i.id]}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
             ))}
           </tbody>
         </table>
@@ -503,6 +580,21 @@ export default function App() {
     }
   };
 
+  const downloadReport = async () => {
+    try {
+      const response = await axios.get('/reports/latest', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `validation_report_${new Date().toISOString().split('T')[0]}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      alert('Failed to download report');
+    }
+  };
+
   const handleManualAction = async (id, action, value) => {
     try {
       if (action === 'approve') {
@@ -540,6 +632,7 @@ export default function App() {
         </nav>
         <div className="sidebar-footer">
           <button className="btn-primary" onClick={runBatch}>Run Daily Batch</button>
+          <button className="btn-secondary" onClick={downloadReport}>📄 Download Report</button>
         </div>
       </aside>
 

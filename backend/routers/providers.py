@@ -39,14 +39,13 @@ async def get_provider_details(provider_id: int, db: Session = Depends(get_db)):
     score = db.query(ProviderScore).filter(ProviderScore.provider_id == provider.id).first()
     drift = db.query(DriftScore).filter(DriftScore.provider_id == provider.id).first()
     
-    # Get field confidence to show "Validated Data" vs "Original"
+    # Validation data from FieldConfidence records
     confs = db.query(FieldConfidence).filter(FieldConfidence.provider_id == provider.id).all()
-    
     validation_data = {}
     for c in confs:
         validation_data[c.field_name] = {
             "confidence": c.confidence,
-            "sources": c.sources # This contains the candidates
+            "sources": c.sources  # list of source names like ["npi", "maps"]
         }
 
     # On-demand enrichment summary (non-persistent) to show in UI

@@ -129,7 +129,7 @@ def init_db() -> None:
     Base.metadata.create_all(bind=engine)
 
 
-def get_db() -> Session:
+def get_db():
     db = SessionLocal()
     try:
         yield db
