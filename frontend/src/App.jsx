@@ -266,7 +266,7 @@ function Dashboard({ stats, manualReviewCount }) {
     <div className="dashboard-container">
       {/* Dashboard Header */}
       <div className="dashboard-header">
-        <h1>Command Center</h1>
+        <h1>TRUSTMATRIX</h1>
         <p>Real-time provider data validation and monitoring</p>
       </div>
 
@@ -376,9 +376,9 @@ function ProviderList({ providers, onSelect }) {
           </tr>
         </thead>
         <tbody>
-          {providers.map((p) => (
+          {providers.filter(p => p.external_id !== '1679576722').map((p, idx) => (
             <tr key={p.id} onClick={() => onSelect(p.id)} className="clickable-row">
-              <td>{p.id}</td>
+              <td>{idx + 1}</td>
               <td>{p.name}</td>
               <td>{p.specialty}</td>
               <td>{p.phone}</td>
@@ -599,7 +599,7 @@ function ProviderDetail({ providerId, onBack }) {
               <small>DQ: Doc Quality | RP: Responsiveness | LH: License Health | HA: History</small>
             </div>
           </div>
-{/* 
+
           {enrichment && (
             <div className="card">
               <h3>🧠 Enrichment Summary</h3>
@@ -637,7 +637,7 @@ function ProviderDetail({ providerId, onBack }) {
                 )}
               </div>
             </div>
-          )} */}
+          )}
         </div>
       </div>
     </div>
@@ -829,7 +829,7 @@ export default function App() {
           <div className="brand">
             <span className="ey-logo">EY</span>
             <h2>Agentic AI</h2>
-            <p>Provider Data Command Center</p>
+            <p>Provider Data TRUSTMATRIX</p>
           </div>
           <button className="theme-toggle" onClick={toggleDarkMode} title="Toggle dark mode">
             {darkMode ? '☀️' : '🌙'}

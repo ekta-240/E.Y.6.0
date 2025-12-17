@@ -435,9 +435,16 @@ body {
   padding: 0.35rem 0.8rem;
   border-radius: 999px;
   border: 1px solid var(--border);
-  background: transparent;
+  background: var(--primary);
+  color: white;
   font-size: 0.8rem;
   cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-small:hover {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
 }
 
 .detail-container { max-width: 1100px; margin: 0 auto; }
@@ -500,7 +507,65 @@ body {
 .actions-cell button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .explanation-row { background: #f5f3ff; }
-.ai-explanation { padding: 1rem; border-left: 3px solid #a855f7; background: #faf5ff; }
+[data-theme="dark"] .explanation-row { background: rgba(168, 85, 247, 0.1); }
+
+.ai-explanation { 
+  padding: 1rem; 
+  border-left: 3px solid #a855f7; 
+  background: #faf5ff;
+  color: #111827;
+}
+
+[data-theme="dark"] .ai-explanation {
+  background: rgba(168, 85, 247, 0.15);
+  color: var(--text);
+}
+
+.explanation-box {
+  padding: 1rem;
+  margin-top: 0.5rem;
+  background: #f0f9ff;
+  border-left: 3px solid #0ea5e9;
+  border-radius: 6px;
+  color: #0c4a6e;
+  line-height: 1.6;
+}
+
+[data-theme="dark"] .explanation-box {
+  background: rgba(14, 165, 233, 0.1);
+  border-left-color: #0ea5e9;
+  color: var(--text);
+}
+
+.enrich-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.enrich-grid div {
+  padding: 1rem;
+  background: var(--surface-muted);
+  border-radius: 8px;
+}
+
+.enrich-grid strong {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.enrich-grid ul {
+  margin: 0.5rem 0 0 1.2rem;
+  padding: 0;
+}
+
+.enrich-grid li {
+  margin-bottom: 0.3rem;
+  color: var(--text);
+}
 
 .detail-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; }
 
@@ -680,6 +745,324 @@ body {
 
 .chatbot-input-area button:hover:not(:disabled) {
   background: var(--accent);
+}
+
+/* ============================================
+   DYNAMIC ANIMATIONS
+   ============================================ */
+
+/* Keyframe Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Apply animations to components */
+.dashboard-container,
+.detail-container,
+.card {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.stat-card {
+  animation: slideInUp 0.6s ease-out;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Staggered animation for stat cards */
+.stat-card:nth-child(1) { animation-delay: 0.1s; }
+.stat-card:nth-child(2) { animation-delay: 0.2s; }
+.stat-card:nth-child(3) { animation-delay: 0.3s; }
+.stat-card:nth-child(4) { animation-delay: 0.4s; }
+
+.chart-card,
+.trend-card {
+  animation: scaleIn 0.6s ease-out;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.chart-card:hover,
+.trend-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* Table row animations */
+.clickable-row {
+  transition: all 0.2s ease;
+}
+
+.clickable-row:hover {
+  background: var(--surface-muted);
+  transform: scale(1.01);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Button animations */
+.btn-run-batch,
+.btn-download,
+.btn-small,
+.btn-approve,
+.btn-override,
+.btn-reject,
+.btn-explain,
+.btn-back {
+  transition: all 0.3s ease;
+}
+
+.btn-run-batch:hover,
+.btn-download:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-run-batch:active,
+.btn-download:active,
+.btn-small:active {
+  transform: translateY(0);
+}
+
+/* Sidebar navigation animation */
+.sidebar-nav button {
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.sidebar-nav button::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 3px;
+  background: var(--primary);
+  transform: scaleY(0);
+  transition: transform 0.3s ease;
+}
+
+.sidebar-nav button.active::before,
+.sidebar-nav button:hover::before {
+  transform: scaleY(1);
+}
+
+/* Badge animations */
+.badge,
+.chip,
+.badge-count {
+  transition: transform 0.2s ease;
+}
+
+.badge:hover,
+.chip:hover {
+  transform: scale(1.05);
+}
+
+/* Pie chart animation */
+.pie-chart {
+  animation: scaleIn 0.8s ease-out;
+}
+
+/* Bar chart animations */
+.bar {
+  animation: slideInUp 0.6s ease-out;
+  transition: transform 0.3s ease, background 0.3s ease;
+}
+
+.bar:hover {
+  transform: scale(1.1);
+  filter: brightness(1.1);
+}
+
+.bar-item:nth-child(1) .bar { animation-delay: 0.1s; }
+.bar-item:nth-child(2) .bar { animation-delay: 0.2s; }
+.bar-item:nth-child(3) .bar { animation-delay: 0.3s; }
+.bar-item:nth-child(4) .bar { animation-delay: 0.4s; }
+.bar-item:nth-child(5) .bar { animation-delay: 0.5s; }
+
+/* Progress bar animation */
+.progress-bar-fill {
+  transition: width 0.8s ease-out;
+}
+
+/* Header animations */
+.dashboard-header h1 {
+  animation: slideInRight 0.6s ease-out;
+}
+
+.dashboard-header p {
+  animation: slideInRight 0.6s ease-out 0.1s;
+  animation-fill-mode: both;
+}
+
+/* Data table animations */
+.data-table tbody tr {
+  animation: slideDown 0.4s ease-out;
+  animation-fill-mode: both;
+}
+
+.data-table tbody tr:nth-child(1) { animation-delay: 0.05s; }
+.data-table tbody tr:nth-child(2) { animation-delay: 0.1s; }
+.data-table tbody tr:nth-child(3) { animation-delay: 0.15s; }
+.data-table tbody tr:nth-child(4) { animation-delay: 0.2s; }
+.data-table tbody tr:nth-child(5) { animation-delay: 0.25s; }
+
+/* Loading state animation */
+.loading-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--surface-muted) 0%,
+    var(--border) 50%,
+    var(--surface-muted) 100%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Theme toggle enhanced animation */
+.theme-toggle {
+  transition: all 0.3s ease;
+}
+
+.theme-toggle:hover {
+  transform: scale(1.1) rotate(15deg);
+}
+
+.theme-toggle:active {
+  transform: scale(0.95);
+}
+
+/* Detail panel animations */
+.header-card,
+.validation-table,
+.qa-history-table,
+.source-table {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* Chatbot window animation */
+.chatbot-window {
+  animation: scaleIn 0.3s ease-out;
+  transform-origin: bottom right;
+}
+
+.chatbot-message {
+  animation: slideInRight 0.3s ease-out;
+}
+
+.chatbot-message.user {
+  animation: slideInRight 0.3s ease-out;
+  transform-origin: right;
+}
+
+.chatbot-message.assistant {
+  animation: slideInRight 0.3s ease-out;
+  transform-origin: left;
+}
+
+/* Legend animations */
+.legend-item,
+.trend-legend {
+  animation: fadeIn 0.6s ease-out;
+}
+
+/* Explanation row animation */
+.explanation-row {
+  animation: slideDown 0.4s ease-out;
+}
+
+.ai-explanation {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* Ensure initial state for animated elements */
+.stat-card,
+.chart-card,
+.trend-card,
+.bar,
+.data-table tbody tr,
+.dashboard-header h1,
+.dashboard-header p {
+  opacity: 0;
+  animation-fill-mode: forwards;
 }
 
 .chatbot-input-area button:disabled {
