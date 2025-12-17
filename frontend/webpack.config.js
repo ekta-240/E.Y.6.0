@@ -36,7 +36,7 @@ module.exports = {
     port: 3020,
     proxy: [
       {
-        context: ['/stats', '/providers', '/manual-review', '/run-batch', '/health', '/reports', '/explain'],
+        context: ['/stats', '/providers', '/manual-review', '/run-batch', '/health', '/reports', '/explain', '/chat'],
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,
         timeout: 600000,
