@@ -27,101 +27,329 @@ function DriftChip({ bucket }) {
 function ProgressBar({ value, max = 100, color = '#4caf50' }) {
   const pct = Math.min(100, Math.max(0, (value / max) * 100));
   return (
-    <div style={{ background: '#eee', borderRadius: '4px', height: '10px', width: '100%' }}>
-      <div style={{ background: color, width: `${pct}%`, height: '100%', borderRadius: '4px' }} />
+    <div className="progress-bar-bg">
+      <div className="progress-bar-fill" style={{ background: color, width: `${pct}%` }} />
+    </div>
+  );
+}
+
+// Chatbot Component
+function Chatbot() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [messages, setMessages] = useState([
+    { role: 'assistant', content: 'Hi! I\'m your AI assistant. Ask me anything about provider data, PCS scores, or any general questions!' }
+  ]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = React.useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return;
+    
+    const userMessage = input.trim();
+    setInput('');
+    const newMessages = [...messages, { role: 'user', content: userMessage }];
+    setMessages(newMessages);
+    setIsLoading(true);
+
+    try {
+      const response = await axios.post('/chat', {
+        message: userMessage,
+        history: newMessages.slice(-6)
+      });
+      
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: response.data.response
+      }]);
+    } catch (err) {
+      const errorMsg = err.response?.status === 429 
+        ? 'Rate limit reached. Please wait a moment before sending more messages.'
+        : 'Sorry, I encountered an error. Please try again.';
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: errorMsg
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  return (
+    <div className="chatbot-container">
+      {isOpen && (
+        <div className="chatbot-window">
+          <div className="chatbot-header">
+            <span>💬 AI Assistant</span>
+            <button className="chatbot-close" onClick={() => setIsOpen(false)}>×</button>
+          </div>
+          <div className="chatbot-messages">
+            {messages.map((msg, idx) => (
+              <div key={idx} className={`chatbot-message ${msg.role}`}>
+                {msg.content}
+              </div>
+            ))}
+            {isLoading && (
+              <div className="chatbot-message assistant">
+                <span className="typing-indicator">●●●</span>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+          <div className="chatbot-input-area">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Ask me anything..."
+              disabled={isLoading}
+            />
+            <button onClick={handleSend} disabled={isLoading || !input.trim()}>
+              ➤
+            </button>
+          </div>
+        </div>
+      )}
+      <button className="chatbot-fab" onClick={() => setIsOpen(!isOpen)}>
+        {isOpen ? '✕' : '💬'}
+      </button>
+    </div>
+  );
+}
+
+// Pie Chart Component
+function PieChart({ data }) {
+  const total = Object.values(data).reduce((a, b) => a + b, 0);
+  if (total === 0) return <div className="pie-chart" style={{ background: '#1a1a2e' }} />;
+  
+  const high = data.High || 0;
+  const medium = data.Medium || 0;
+  const low = data.Low || 0;
+  
+  const highPct = (high / total) * 100;
+  const mediumPct = (medium / total) * 100;
+  
+  const gradient = `conic-gradient(
+    #ef4444 0% ${highPct}%,
+    #f59e0b ${highPct}% ${highPct + mediumPct}%,
+    #10b981 ${highPct + mediumPct}% 100%
+  )`;
+  
+  return (
+    <div className="pie-chart-wrapper">
+      <div className="pie-chart" style={{ background: gradient }} />
+      <div className="pie-center">
+        <span className="pie-center-value">{total}</span>
+        <span className="pie-center-label">Total</span>
+      </div>
+    </div>
+  );
+}
+
+// Bar Chart Component  
+function BarChart({ data }) {
+  const entries = Object.entries(data || {});
+  const maxVal = Math.max(...Object.values(data || {}), 1);
+  
+  return (
+    <div className="bar-chart-container">
+      {entries.map(([key, val], idx) => (
+        <div key={key} className="bar-item">
+          <span className="bar-value">{val}</span>
+          <div className="bar-wrapper">
+            <div 
+              className={`bar range-${idx % 5}`} 
+              style={{ height: `${Math.max((val / maxVal) * 150, 8)}px` }}
+            />
+          </div>
+          <span className="bar-label">{key}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Line Chart Component
+function LineChart({ trend }) {
+  if (!trend || trend.length === 0) {
+    return <div style={{ color: '#8892a0', textAlign: 'center', padding: '2rem' }}>No trend data available</div>;
+  }
+  
+  const maxAuto = Math.max(...trend.map(t => t.auto_updates || 0), 1);
+  const maxManual = Math.max(...trend.map(t => t.manual_reviews || 0), 1);
+  const maxVal = Math.max(maxAuto, maxManual, 100);
+  
+  const width = 100;
+  const height = 100;
+  const padding = 10;
+  
+  const getX = (idx) => padding + (idx / (trend.length - 1 || 1)) * (width - 2 * padding);
+  const getY = (val) => height - padding - (val / maxVal) * (height - 2 * padding);
+  
+  const autoPath = trend.map((t, i) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(t.auto_updates || 0)}`).join(' ');
+  const manualPath = trend.map((t, i) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(t.manual_reviews || 0)}`).join(' ');
+  
+  return (
+    <div>
+      <div className="trend-legend">
+        <div className="trend-legend-item">
+          <div className="trend-legend-line auto"></div>
+          <span>Auto-Updates</span>
+        </div>
+        <div className="trend-legend-item">
+          <div className="trend-legend-line manual"></div>
+          <span>Manual Reviews</span>
+        </div>
+      </div>
+      <div className="line-chart-container">
+        <div className="y-axis-labels">
+          <span>100</span>
+          <span>75</span>
+          <span>50</span>
+          <span>25</span>
+          <span>0</span>
+        </div>
+        <svg className="line-chart-svg" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+          <path d={autoPath} fill="none" stroke="#4caf50" strokeWidth="2" />
+          <path d={manualPath} fill="none" stroke="#ffc107" strokeWidth="2" />
+          {trend.map((t, i) => (
+            <React.Fragment key={i}>
+              <circle cx={getX(i)} cy={getY(t.auto_updates || 0)} r="3" fill="#4caf50" />
+              <circle cx={getX(i)} cy={getY(t.manual_reviews || 0)} r="3" fill="#ffc107" />
+            </React.Fragment>
+          ))}
+        </svg>
+      </div>
+      <div className="x-axis-labels">
+        {trend.map((t, i) => (
+          <span key={i}>{t.date || `Run ${i + 1}`}</span>
+        ))}
+      </div>
     </div>
   );
 }
 
 function Dashboard({ stats, manualReviewCount }) {
-  if (!stats) return <div>Loading stats...</div>;
+  if (!stats) return <div style={{ color: '#fff', padding: '2rem' }}>Loading stats...</div>;
   
   const { latest_run, avg_pcs, drift_distribution, pcs_distribution, trend } = stats;
-
-  const maxDrift = Math.max(...Object.values(drift_distribution), 1);
-  const maxPCS = Math.max(...Object.values(pcs_distribution || {}), 1);
+  
+  // Format date nicely
+  const formatDate = (dateStr) => {
+    if (!dateStr) return 'Never';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' + 
+           date.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true });
+  };
+  
+  // Calculate auto-update percentage
+  const totalFields = (latest_run?.auto_updates || 0) + (manualReviewCount || 0);
+  const autoPercent = totalFields > 0 ? ((latest_run?.auto_updates || 0) / totalFields * 100).toFixed(1) : 0;
 
   return (
     <div className="dashboard-container">
-      <div className="card stats-summary">
-        <h2>🚀 System Status</h2>
-        <div className="stat-row">
-          <div className="stat-item">
-            <h3>Last Run</h3>
-            <p>{latest_run.started_at ? new Date(latest_run.started_at).toLocaleString() : 'Never'}</p>
-            <small>{latest_run.type} Batch</small>
+      {/* Dashboard Header */}
+      <div className="dashboard-header">
+        <h1>Command Center</h1>
+        <p>Real-time provider data validation and monitoring</p>
+      </div>
+
+      {/* Stats Row */}
+      <div className="stats-row">
+        <div className="stat-card">
+          <div className="stat-icon blue">🕐</div>
+          <div className="stat-label">Last Run</div>
+          <div className="stat-value">{formatDate(latest_run?.started_at)}</div>
+          <div className="stat-sub">{latest_run?.type || 'Daily'} Batch</div>
+        </div>
+        
+        <div className="stat-card">
+          <div className="stat-icon purple">👥</div>
+          <div className="stat-label">Processed</div>
+          <div className="stat-value">{latest_run?.count_processed || 0}</div>
+          <div className="stat-sub">Providers Analyzed</div>
+        </div>
+        
+        <div className="stat-card">
+          <div className="stat-icon green">✓</div>
+          <div className="stat-label">Auto-Updated</div>
+          <div className="stat-value success">
+            {latest_run?.auto_updates || 0} Fields
+            <span className="stat-trend up">↑ {autoPercent}%</span>
           </div>
-          <div className="stat-item">
-            <h3>Processed</h3>
-            <p>{latest_run.count_processed}</p>
-          </div>
-          <div className="stat-item">
-            <h3>Auto-Updated</h3>
-            <p className="text-success">{latest_run.auto_updates}</p>
-          </div>
-          <div className="stat-item">
-            <h3>Manual Review</h3>
-            <p className="text-warning">{manualReviewCount || 0}</p>
-          </div>
-          <div className="stat-item">
-            <h3>Avg PCS</h3>
-            <p>{avg_pcs ? avg_pcs.toFixed(1) : 'N/A'}</p>
-          </div>
+          <div className="stat-sub">High Confidence Updates</div>
+        </div>
+        
+        <div className="stat-card">
+          <div className="stat-icon orange">⚡</div>
+          <div className="stat-label">Manual Review</div>
+          <div className="stat-value warning">{manualReviewCount || 0}</div>
+          <div className="stat-sub">Pending Actions</div>
+          {manualReviewCount > 0 && <span className="warning-badge">!</span>}
         </div>
       </div>
 
-      <div className="charts-grid">
-        <div className="card">
-          <h3>📉 Drift Distribution</h3>
-          <div className="chart-bar-container">
-            {Object.entries(drift_distribution).map(([key, val]) => (
-              <div key={key} className="chart-bar-row">
-                <span className="label">{key}</span>
-                <div className="bar-wrapper">
-                  <div className={`bar drift-${key.toLowerCase()}`} style={{ width: `${(val / maxDrift) * 100}%` }} />
-                  <span className="count">{val}</span>
-                </div>
+      {/* Charts Row */}
+      <div className="charts-row">
+        <div className="chart-card">
+          <h3>
+            <span className="icon" style={{background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0.05) 100%)'}}>🎯</span>
+            Drift Risk Distribution
+          </h3>
+          <div className="pie-chart-container">
+            <PieChart data={drift_distribution || {}} />
+            <div className="pie-legend">
+              <div className="legend-item">
+                <span className="legend-dot high"></span>
+                <span className="legend-text">High Risk</span>
+                <span className="legend-value">{drift_distribution?.High || 0}</span>
               </div>
-            ))}
+              <div className="legend-item">
+                <span className="legend-dot medium"></span>
+                <span className="legend-text">Medium</span>
+                <span className="legend-value">{drift_distribution?.Medium || 0}</span>
+              </div>
+              <div className="legend-item">
+                <span className="legend-dot low"></span>
+                <span className="legend-text">Low</span>
+                <span className="legend-value">{drift_distribution?.Low || 0}</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="card">
-          <h3>📊 PCS Distribution</h3>
-          <div className="chart-bar-container">
-            {Object.entries(pcs_distribution || {}).map(([key, val]) => (
-              <div key={key} className="chart-bar-row">
-                <span className="label">{key}</span>
-                <div className="bar-wrapper">
-                  <div className="bar pcs-bar" style={{ width: `${(val / maxPCS) * 100}%`, background: '#2196f3' }} />
-                  <span className="count">{val}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+        <div className="chart-card">
+          <h3>
+            <span className="icon" style={{background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(139, 92, 246, 0.05) 100%)'}}>📊</span>
+            PCS Score Distribution
+          </h3>
+          <BarChart data={pcs_distribution} />
         </div>
+      </div>
 
-        <div className="card">
-          <h3>📈 Trend (Last 5 Runs)</h3>
-          <table className="trend-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Auto</th>
-                <th>Manual</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(trend || []).map((t) => (
-                <tr key={t.id}>
-                  <td>{t.date}</td>
-                  <td>{t.auto_updates}</td>
-                  <td>{t.manual_reviews}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {/* Trend Chart */}
+      <div className="trend-card">
+        <h3>
+          <span className="icon" style={{background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.05) 100%)'}}>📈</span>
+          Automation Trend (Last 5 Runs)
+        </h3>
+        <LineChart trend={trend} />
       </div>
     </div>
   );
@@ -514,10 +742,22 @@ function ManualReview({ items, onAction }) {
 export default function App() {
   const [view, setView] = useState('dashboard');
   const [selectedProviderId, setSelectedProviderId] = useState(null);
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('darkMode');
+    return saved ? JSON.parse(saved) : false;
+  });
 
   const [stats, setStats] = useState(null);
   const [providers, setProviders] = useState([]);
   const [manualItems, setManualItems] = useState([]);
+
+  // Apply dark mode to document
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+    localStorage.setItem('darkMode', JSON.stringify(darkMode));
+  }, [darkMode]);
+
+  const toggleDarkMode = () => setDarkMode(!darkMode);
 
   const loadData = async () => {
     try {
@@ -583,31 +823,50 @@ export default function App() {
 
   return (
     <div className="app-layout">
+      {/* Left Sidebar */}
       <aside className="sidebar">
-        <div className="brand">
-          <h2>EY Agentic AI</h2>
-          <p>Provider Directory</p>
+        <div className="brand-row">
+          <div className="brand">
+            <span className="ey-logo">EY</span>
+            <h2>Agentic AI</h2>
+            <p>Provider Data Command Center</p>
+          </div>
+          <button className="theme-toggle" onClick={toggleDarkMode} title="Toggle dark mode">
+            {darkMode ? '☀️' : '🌙'}
+          </button>
         </div>
-        <nav>
-          <button className={view === 'dashboard' ? 'active' : ''} onClick={() => setView('dashboard')}>Dashboard</button>
-          <button className={view === 'providers' ? 'active' : ''} onClick={() => setView('providers')}>Providers</button>
+        <nav className="sidebar-nav">
+          <button className={view === 'dashboard' ? 'active' : ''} onClick={() => setView('dashboard')}>
+            📊 Dashboard
+          </button>
+          <button className={view === 'providers' ? 'active' : ''} onClick={() => setView('providers')}>
+            🏥 Providers
+          </button>
           <button className={view === 'manual' ? 'active' : ''} onClick={() => setView('manual')}>
-            Manual Review
+            📝 Manual Review
             {manualItems.length > 0 && <span className="badge-count">{manualItems.length}</span>}
           </button>
         </nav>
         <div className="sidebar-footer">
-          <button className="btn-primary" onClick={runBatch}>Run Daily Batch</button>
-          <button className="btn-secondary" onClick={downloadReport}>📄 Download Report</button>
+          <button className="btn-run-batch" onClick={runBatch}>
+            ▷ Run Daily Batch
+          </button>
+          <button className="btn-download" onClick={downloadReport}>
+            ↓ Download Report
+          </button>
         </div>
       </aside>
 
-      <main className="content">
+      {/* Main Content */}
+      <main className="main-content">
         {view === 'dashboard' && <Dashboard stats={stats} manualReviewCount={manualItems.length} />}
         {view === 'providers' && <ProviderList providers={providers} onSelect={navigateToDetail} />}
         {view === 'detail' && <ProviderDetail providerId={selectedProviderId} onBack={() => setView('providers')} />}
         {view === 'manual' && <ManualReview items={manualItems} onAction={handleManualAction} />}
       </main>
+
+      {/* Chatbot */}
+      <Chatbot />
     </div>
   );
 }
